@@ -18,32 +18,18 @@ package okhttp3;
 import java.io.IOException;
 
 /**
- * A call is a request that has been prepared for execution. A call can be canceled. As this object
- * represents a single request/response pair (stream), it cannot be executed twice.
+ * 调用请求,准备执行。一个call可以取消。这个对象表示一个单一的请求/响应对(流),它不能被执行两次。
  */
 public interface Call extends Cloneable {
   /** Returns the original request that initiated this call. */
   Request request();
 
   /**
-   * Invokes the request immediately, and blocks until the response can be processed or is in
-   * error.
+   * 立即调用请求,直到可以处理或在错误的响应
    *
-   * <p>To avoid leaking resources callers should close the {@link Response} which in turn will
-   * close the underlying {@link ResponseBody}.
+   * 为了避免泄漏资源调用者应该关闭Response，进而将关闭底层.
    *
-   * <pre>@{code
-   *
-   *   // ensure the response (and underlying response body) is closed
-   *   try (Response response = client.newCall(request).execute()) {
-   *     ...
-   *   }
-   *
-   * }</pre>
-   *
-   * <p>The caller may read the response body with the response's {@link Response#body} method. To
-   * avoid leaking resources callers must {@linkplain ResponseBody close the response body} or the
-   * Response.
+   * 调用者可能会读取response body。为了避免泄漏资源调用者必须关闭response body或Response。
    *
    * <p>Note that transport-layer success (receiving a HTTP response code, headers and body) does
    * not necessarily indicate application-layer success: {@code response} may still indicate an
@@ -52,37 +38,32 @@ public interface Call extends Cloneable {
    * @throws IOException if the request could not be executed due to cancellation, a connectivity
    * problem or timeout. Because networks can fail during an exchange, it is possible that the
    * remote server accepted the request before the failure.
-   * @throws IllegalStateException when the call has already been executed.
+   * @throws IllegalStateException 当调用已经执行
    */
   Response execute() throws IOException;
 
   /**
    * Schedules the request to be executed at some point in the future.
+   * 请求将会执行，除非有几个请求正在执行
    *
-   * <p>The {@link OkHttpClient#dispatcher dispatcher} defines when the request will run: usually
-   * immediately unless there are several other requests currently being executed.
-   *
-   * <p>This client will later call back {@code responseCallback} with either an HTTP response or a
-   * failure exception.
+   * client将会通过回调返回response或者失败的exception
    *
    * @throws IllegalStateException when the call has already been executed.
    */
   void enqueue(Callback responseCallback);
 
-  /** Cancels the request, if possible. Requests that are already complete cannot be canceled. */
+  /** 取消请求，不是一定能取消，假如请求已完成就不能取消了 */
   void cancel();
 
   /**
-   * Returns true if this call has been either {@linkplain #execute() executed} or {@linkplain
-   * #enqueue(Callback) enqueued}. It is an error to execute a call more than once.
+   * 当call调用过了execute或者enqueue就返回true，记住call只能调用一次上述方法，否则报错
    */
   boolean isExecuted();
 
   boolean isCanceled();
 
   /**
-   * Create a new, identical call to this one which can be enqueued or executed even if this call
-   * has already been.
+   * 创建一个全新的完全相同的call，可以执行execute或者enqueue，即使原来的call已经执行过了这两个方法
    */
   Call clone();
 

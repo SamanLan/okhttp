@@ -24,6 +24,7 @@ import okhttp3.internal.http.HttpMethod;
 /**
  * An HTTP request. Instances of this class are immutable if their {@link #body} is null or itself
  * immutable.
+ * Http请求，假如body为null或者自身不可变的话，则不可变。
  */
 public final class Request {
   final HttpUrl url;
@@ -77,6 +78,7 @@ public final class Request {
   /**
    * Returns the cache control directives for this response. This is never null, even if this
    * response contains no {@code Cache-Control} header.
+   * 懒加载，且永不为空，即使header没有Cache-Control的header
    */
   public CacheControl cacheControl() {
     CacheControl result = cacheControl;
@@ -104,6 +106,9 @@ public final class Request {
     RequestBody body;
     Object tag;
 
+    /**
+     * 默认是get
+     */
     public Builder() {
       this.method = "GET";
       this.headers = new Headers.Builder();

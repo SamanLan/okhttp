@@ -27,13 +27,20 @@ import okhttp3.internal.connection.StreamAllocation;
 /**
  * A concrete interceptor chain that carries the entire interceptor chain: all application
  * interceptors, the OkHttp core, all network interceptors, and finally the network caller.
+ * 一个具体的拦截器链携带整个拦截器链:所有应用程序拦截器,okHttp核心,所有网络拦截器,最后网络调用者。
  */
 public final class RealInterceptorChain implements Interceptor.Chain {
+  // 拦截器list
   private final List<Interceptor> interceptors;
+  // 流分配
   private final StreamAllocation streamAllocation;
+  // 编解码器
   private final HttpCodec httpCodec;
+  // 真正的连接
   private final RealConnection connection;
+  // index
   private final int index;
+  // 请求
   private final Request request;
   private int calls;
 
@@ -69,6 +76,7 @@ public final class RealInterceptorChain implements Interceptor.Chain {
 
   public Response proceed(Request request, StreamAllocation streamAllocation, HttpCodec httpCodec,
       RealConnection connection) throws IOException {
+    // index可以控制从拦截器链的哪里开始拦截（即忽略小于index的拦截器了）
     if (index >= interceptors.size()) throw new AssertionError();
 
     calls++;
@@ -80,24 +88,25 @@ public final class RealInterceptorChain implements Interceptor.Chain {
     }
 
     // If we already have a stream, confirm that this is the only call to chain.proceed().
+    // 这里应该是确保每个拦截器链只能proceed一次的吧
     if (this.httpCodec != null && calls > 1) {
       throw new IllegalStateException("network interceptor " + interceptors.get(index - 1)
           + " must call proceed() exactly once");
     }
 
-    // Call the next interceptor in the chain.
+    // 通过对index的控制，进而一层一层的对拦截器链的每一个拦截器进行拦截处理，最后得到response
     RealInterceptorChain next = new RealInterceptorChain(
         interceptors, streamAllocation, httpCodec, connection, index + 1, request);
     Interceptor interceptor = interceptors.get(index);
     Response response = interceptor.intercept(next);
 
-    // Confirm that the next interceptor made its required call to chain.proceed().
+    // 这里通过对list的长度和index进行对比，确保每一个拦截器都有调用到，否则报错（这是要求每一拦截器都需要处理拦截器链的下一层）.
     if (httpCodec != null && index + 1 < interceptors.size() && next.calls != 1) {
       throw new IllegalStateException("network interceptor " + interceptor
           + " must call proceed() exactly once");
     }
 
-    // Confirm that the intercepted response isn't null.
+    // 确保拦截器返回response不为空
     if (response == null) {
       throw new NullPointerException("interceptor " + interceptor + " returned null");
     }

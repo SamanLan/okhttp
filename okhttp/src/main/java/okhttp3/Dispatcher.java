@@ -30,27 +30,33 @@ import okhttp3.RealCall.AsyncCall;
 import okhttp3.internal.Util;
 
 /**
- * Policy on when async requests are executed.
+ * 当异步请求执行政策。
  *
  * <p>Each dispatcher uses an {@link ExecutorService} to run calls internally. If you supply your
  * own executor, it should be able to run {@linkplain #getMaxRequests the configured maximum} number
  * of calls concurrently.
  */
 public final class Dispatcher {
+  // 最多请求数
   private int maxRequests = 64;
+  // 每台主机最多的并发请求数
   private int maxRequestsPerHost = 5;
   private @Nullable Runnable idleCallback;
 
   /** Executes calls. Created lazily. */
+  /* 懒加载 */
   private @Nullable ExecutorService executorService;
 
   /** Ready async calls in the order they'll be run. */
+  // 双端队列，准备好的异步请求队列
   private final Deque<AsyncCall> readyAsyncCalls = new ArrayDeque<>();
 
   /** Running asynchronous calls. Includes canceled calls that haven't finished yet. */
+  // 双端队列，运行异步调用。包括取消了call还没完成的
   private final Deque<AsyncCall> runningAsyncCalls = new ArrayDeque<>();
 
   /** Running synchronous calls. Includes canceled calls that haven't finished yet. */
+  // 双端队列，运行同步调用。包括取消了call还没完成的
   private final Deque<RealCall> runningSyncCalls = new ArrayDeque<>();
 
   public Dispatcher(ExecutorService executorService) {
@@ -69,11 +75,7 @@ public final class Dispatcher {
   }
 
   /**
-   * Set the maximum number of requests to execute concurrently. Above this requests queue in
-   * memory, waiting for the running calls to complete.
-   *
-   * <p>If more than {@code maxRequests} requests are in flight when this is invoked, those requests
-   * will remain in flight.
+   * 设置请求并发执行的最大数量。在内存中高于这个请求队列,等待运行调用完成。
    */
   public synchronized void setMaxRequests(int maxRequests) {
     if (maxRequests < 1) {
@@ -109,8 +111,7 @@ public final class Dispatcher {
   }
 
   /**
-   * Set a callback to be invoked each time the dispatcher becomes idle (when the number of running
-   * calls returns to zero).
+   * 设置回调将每次调用调度程序变为空闲时(当运行调用的数量为零)。
    *
    * <p>Note: The time at which a {@linkplain Call call} is considered idle is different depending
    * on whether it was run {@linkplain Call#enqueue(Callback) asynchronously} or
@@ -125,6 +126,7 @@ public final class Dispatcher {
   }
 
   synchronized void enqueue(AsyncCall call) {
+    // 先判断是否符合各种max数
     if (runningAsyncCalls.size() < maxRequests && runningCallsForHost(call) < maxRequestsPerHost) {
       runningAsyncCalls.add(call);
       executorService().execute(call);
@@ -134,8 +136,7 @@ public final class Dispatcher {
   }
 
   /**
-   * Cancel all calls currently enqueued or executing. Includes calls executed both {@linkplain
-   * Call#execute() synchronously} and {@linkplain Call#enqueue asynchronously}.
+   * 取消所有请求
    */
   public synchronized void cancelAll() {
     for (AsyncCall call : readyAsyncCalls) {
@@ -151,6 +152,9 @@ public final class Dispatcher {
     }
   }
 
+  /**
+   * 这里是在每次设置了两个max数都会调用的方法，先判断当前runningAsyncCalls有没有大于最大值再判断准备好的队列是否为空，true则return，false则将请求从准备好队列添加到运行队列
+   */
   private void promoteCalls() {
     if (runningAsyncCalls.size() >= maxRequests) return; // Already running max capacity.
     if (readyAsyncCalls.isEmpty()) return; // No ready calls to promote.
@@ -168,7 +172,7 @@ public final class Dispatcher {
     }
   }
 
-  /** Returns the number of running calls that share a host with {@code call}. */
+  /** 返回runningAsyncCalls中对应的call对应的host主机的链接请求数 */
   private int runningCallsForHost(AsyncCall call) {
     int result = 0;
     for (AsyncCall c : runningAsyncCalls) {
@@ -192,6 +196,9 @@ public final class Dispatcher {
     finished(runningSyncCalls, call, false);
   }
 
+  /**
+   * 每个请求结束回到这里，异步请求则promoteCalls，同步请求则不用。假如结束回调不为空则会在异步请求队列和同步请求队列都为空的情况下回调。
+   */
   private <T> void finished(Deque<T> calls, T call, boolean promoteCalls) {
     int runningCallsCount;
     Runnable idleCallback;

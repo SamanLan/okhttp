@@ -27,6 +27,7 @@ import okio.Source;
 
 public abstract class RequestBody {
   /** Returns the Content-Type header for this body. */
+  /* 返回header的内容类型 */
   public abstract @Nullable MediaType contentType();
 
   /**

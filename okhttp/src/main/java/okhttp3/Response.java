@@ -34,8 +34,7 @@ import static okhttp3.internal.http.StatusLine.HTTP_PERM_REDIRECT;
 import static okhttp3.internal.http.StatusLine.HTTP_TEMP_REDIRECT;
 
 /**
- * An HTTP response. Instances of this class are not immutable: the response body is a one-shot
- * value that may be consumed only once and then closed. All other properties are immutable.
+ * 一个HTTP响应。这个类的实例不是一成不变的:response的body是一个镜头值,只能使用一次,然后关闭。所有其他属性是不可变的。
  *
  * <p>This class implements {@link Closeable}. Closing it simply closes its response body. See
  * {@link ResponseBody} for an explanation and examples.
@@ -48,10 +47,15 @@ public final class Response implements Closeable {
   final @Nullable Handshake handshake;
   final Headers headers;
   final @Nullable ResponseBody body;
+  // 网络响应
   final @Nullable Response networkResponse;
+  // 缓存响应
   final @Nullable Response cacheResponse;
+  // 之前的响应
   final @Nullable Response priorResponse;
+  // 发送request的时间
   final long sentRequestAtMillis;
+  // 接收到response的时间
   final long receivedResponseAtMillis;
 
   private volatile CacheControl cacheControl; // Lazily initialized.
@@ -99,8 +103,7 @@ public final class Response implements Closeable {
   }
 
   /**
-   * Returns true if the code is in [200..300), which means the request was successfully received,
-   * understood, and accepted.
+   * 返回true,如果代码是在[200 . . 300),这意味着请求已成功收到,理解,和接受。
    */
   public boolean isSuccessful() {
     return code >= 200 && code < 300;
@@ -181,7 +184,7 @@ public final class Response implements Closeable {
     return new Builder(this);
   }
 
-  /** Returns true if this response redirects to another resource. */
+  /** 如果这种反应重定向到另一个资源则返回true. */
   public boolean isRedirect() {
     switch (code) {
       case HTTP_PERM_REDIRECT:
@@ -197,18 +200,14 @@ public final class Response implements Closeable {
   }
 
   /**
-   * Returns the raw response received from the network. Will be null if this response didn't use
-   * the network, such as when the response is fully cached. The body of the returned response
-   * should not be read.
+   * 返回原始响应来自网络。如果这个反应没有使用网络,将是null,例如当完全缓存的响应.返回响应的主体不应读
    */
   public @Nullable Response networkResponse() {
     return networkResponse;
   }
 
   /**
-   * Returns the raw response received from the cache. Will be null if this response didn't use the
-   * cache. For conditional get requests the cache response and network response may both be
-   * non-null. The body of the returned response should not be read.
+   * 从缓存中返回原始的响应了。如果没有使用缓存响应,将是null.如果是get请求缓存响应和网络响应可能两个都不为null。返回响应的主体不应读。
    */
   public @Nullable Response cacheResponse() {
     return cacheResponse;

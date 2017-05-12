@@ -32,6 +32,7 @@ import static okhttp3.internal.platform.Platform.INFO;
 
 final class RealCall implements Call {
   final OkHttpClient client;
+  // 重试和跟踪拦截器
   final RetryAndFollowUpInterceptor retryAndFollowUpInterceptor;
   final EventListener eventListener;
 
@@ -60,13 +61,16 @@ final class RealCall implements Call {
 
   @Override public Response execute() throws IOException {
     synchronized (this) {
+      // 这里锁住使得每一个call只能用一次execute或者execute
       if (executed) throw new IllegalStateException("Already Executed");
       executed = true;
     }
+    // TODO: 2017/5/11 这里我暂时还不知道是啥玩意，难道是追踪调用器栈堆？
     captureCallStackTrace();
     try {
       client.dispatcher().executed(this);
       Response result = getResponseWithInterceptorChain();
+      // 下面这句其实不知道能不能来得到的，因为response为空的话在getResponseWithInterceptorChain里面的RealInterceptorChain就会抛出NullPointerException了
       if (result == null) throw new IOException("Canceled");
       return result;
     } finally {
@@ -172,14 +176,19 @@ final class RealCall implements Call {
     List<Interceptor> interceptors = new ArrayList<>();
     interceptors.addAll(client.interceptors());
     interceptors.add(retryAndFollowUpInterceptor);
+    // 网桥拦截器
     interceptors.add(new BridgeInterceptor(client.cookieJar()));
+    // 缓存拦截器
     interceptors.add(new CacheInterceptor(client.internalCache()));
+    // 链接拦截器
     interceptors.add(new ConnectInterceptor(client));
     if (!forWebSocket) {
       interceptors.addAll(client.networkInterceptors());
     }
+    // 每一个拦截器链的最后一个，这里从网络得到结果
     interceptors.add(new CallServerInterceptor(forWebSocket));
 
+    // 拦截器链
     Interceptor.Chain chain = new RealInterceptorChain(
         interceptors, null, null, null, 0, originalRequest);
     return chain.proceed(originalRequest);
